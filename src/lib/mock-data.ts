@@ -1,44 +1,42 @@
-// Mock fixtures for UI work — types match plan.md schema.
-// Replaced with real DB queries once Phase 1 ships.
-
 export type Community = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  logoUrl?: string;
-  coverImageUrl?: string;
-  memberCount: number;
-};
+  id: string
+  slug: string
+  name: string
+  description: string
+  logoUrl?: string
+  coverImageUrl?: string
+  memberCount: number
+}
 
-export type PostVisibility = "public" | "vit_only";
-export type LocationVisibility = "public" | "after_approval";
-export type PostStatus = "draft" | "published" | "cancelled" | "completed" | "hidden";
+export type PostVisibility = "public" | "vit_only"
+export type LocationVisibility = "public" | "after_approval"
+export type PostStatus =
+  "draft" | "published" | "cancelled" | "completed" | "hidden"
 
 export type Post = {
-  id: string;
-  slug: string;
-  communityId: string;
-  authorId: string;
-  authorName: string;
-  title: string;
-  body: string;
-  imageUrl?: string;
-  visibility: PostVisibility;
-  isPinned: boolean;
-  status: PostStatus;
-  isEvent: boolean;
-  startsAt?: Date;
-  endsAt?: Date;
-  location?: string;
-  locationVisibility?: LocationVisibility;
-  registrationOpensAt?: Date;
-  registrationClosesAt?: Date;
-  capacity?: number;
-  requiresApproval: boolean;
-  registrationCount: number;
-  createdAt: Date;
-};
+  id: string
+  slug: string
+  communityId: string
+  authorId: string
+  authorName: string
+  title: string
+  body: string
+  imageUrl?: string
+  visibility: PostVisibility
+  isPinned: boolean
+  status: PostStatus
+  isEvent: boolean
+  startsAt?: Date
+  endsAt?: Date
+  location?: string
+  locationVisibility?: LocationVisibility
+  registrationOpensAt?: Date
+  registrationClosesAt?: Date
+  capacity?: number
+  requiresApproval: boolean
+  registrationCount: number
+  createdAt: Date
+}
 
 export const communities: Community[] = [
   {
@@ -80,14 +78,14 @@ export const communities: Community[] = [
       "Engineering, ethics, and electrical projects. Industry talks and paper presentation training.",
     memberCount: 173,
   },
-];
+]
 
-const today = new Date();
+const today = new Date()
 function daysFromNow(n: number, hour = 10, minute = 0) {
-  const d = new Date(today);
-  d.setDate(d.getDate() + n);
-  d.setHours(hour, minute, 0, 0);
-  return d;
+  const d = new Date(today)
+  d.setDate(d.getDate() + n)
+  d.setHours(hour, minute, 0, 0)
+  return d
 }
 
 export const posts: Post[] = [
@@ -262,24 +260,24 @@ export const posts: Post[] = [
     registrationCount: 0,
     createdAt: daysFromNow(0),
   },
-];
+]
 
 export function getCommunityById(id: string): Community | undefined {
-  return communities.find((c) => c.id === id);
+  return communities.find((c) => c.id === id)
 }
 
 export function getCommunityBySlug(slug: string): Community | undefined {
-  return communities.find((c) => c.slug === slug);
+  return communities.find((c) => c.slug === slug)
 }
 
 export function getPostBySlug(slug: string): Post | undefined {
-  return posts.find((p) => p.slug === slug);
+  return posts.find((p) => p.slug === slug)
 }
 
 export function getPostsForCommunity(communityId: string): Post[] {
-  return posts.filter((p) => p.communityId === communityId);
+  return posts.filter((p) => p.communityId === communityId)
 }
 
 export function getEvents(): Post[] {
-  return posts.filter((p) => p.isEvent && p.status === "published");
+  return posts.filter((p) => p.isEvent && p.status === "published")
 }

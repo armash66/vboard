@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vboard-postgres
+    environment:
+      POSTGRES_USER: vboard
+      POSTGRES_PASSWORD: vboard
+      POSTGRES_DB: vboard
+    ports:
+      - "5434:5432"
+    volumes:
+      - vboard-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vboard -d vboard"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  vboard-pgdata:

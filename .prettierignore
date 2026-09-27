@@ -1,0 +1,6 @@
+src/db/migrations/meta/
+
+node_modules
+.next
+build
+docs
