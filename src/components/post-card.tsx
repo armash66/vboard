@@ -2,15 +2,14 @@ import Link from "next/link"
 import { ArrowUpRight, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { bodyPreview, formatEventDate } from "@/lib/format"
-import { getCommunityById, type Post } from "@/lib/mock-data"
+import type { FeedPost } from "@/db/queries/posts"
 
 type Props = {
-  post: Post
+  post: FeedPost
   variant?: "default" | "compact"
 }
 
 export function PostCard({ post, variant = "default" }: Props) {
-  const community = getCommunityById(post.communityId)
   const compact = variant === "compact"
 
   return (
@@ -22,20 +21,18 @@ export function PostCard({ post, variant = "default" }: Props) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {community && (
-            <Link
-              href={`/communities/${community.slug}`}
-              className="inline-flex items-center gap-2 text-[0.78rem] font-medium transition-colors hover:text-[var(--brand)]"
-              style={{ color: "var(--text)" }}
-            >
-              <span
-                className="size-1.5 rounded-full"
-                style={{ background: "var(--brand)" }}
-                aria-hidden
-              />
-              {community.name}
-            </Link>
-          )}
+          <Link
+            href={`/communities/${post.communitySlug}`}
+            className="inline-flex items-center gap-2 text-[0.78rem] font-medium transition-colors hover:text-[var(--brand)]"
+            style={{ color: "var(--text)" }}
+          >
+            <span
+              className="size-1.5 rounded-full"
+              style={{ background: "var(--brand)" }}
+              aria-hidden
+            />
+            {post.communityName}
+          </Link>
         </div>
         <span
           className="font-mono text-[0.7rem] tracking-[0.12em] uppercase"
@@ -80,7 +77,7 @@ export function PostCard({ post, variant = "default" }: Props) {
           {post.startsAt && (
             <MetaCell
               label="When"
-              value={formatEventDate(post.startsAt, post.endsAt)}
+              value={formatEventDate(post.startsAt, post.endsAt ?? undefined)}
             />
           )}
           {post.location && (
@@ -100,7 +97,7 @@ export function PostCard({ post, variant = "default" }: Props) {
           {typeof post.capacity === "number" && (
             <MetaCell
               label="Spots"
-              value={`${post.registrationCount}/${post.capacity}`}
+              value={`${post.seatsTaken}/${post.capacity}`}
             />
           )}
           {post.requiresApproval && (
@@ -113,7 +110,9 @@ export function PostCard({ post, variant = "default" }: Props) {
         className="mt-6 flex items-center justify-between text-[0.78rem]"
         style={{ color: "var(--text-muted)" }}
       >
-        <span className="font-mono">{post.authorName}</span>
+        <span className="font-mono">
+          {post.authorName ?? post.communityName}
+        </span>
         <Link
           href={`/posts/${post.slug}`}
           className="inline-flex items-center gap-1.5 font-mono tracking-[0.08em] uppercase transition-colors hover:text-[var(--brand)]"

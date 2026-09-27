@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import { initials } from "@/lib/identity"
 import { cn } from "@/lib/utils"
 
 const navLinks = [
@@ -16,7 +17,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function Nav() {
+export function Nav({ user }: { user: { name: string } | null }) {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
 
@@ -73,32 +74,53 @@ export function Nav() {
               className="mx-1 h-4 w-px"
               style={{ background: "var(--border)" }}
             />
-            <li>
-              <Link
-                href="/login"
-                className="font-mono text-[0.78rem] font-medium tracking-[0.06em] uppercase transition-colors hover:text-[var(--brand)]"
-                style={{ color: "var(--text-dim)" }}
-              >
-                Sign in
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/signup"
-                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-4 py-2 font-mono text-[0.78rem] font-medium tracking-[0.06em] uppercase transition-colors"
-                style={{ background: "var(--text)", color: "var(--bg)" }}
-              >
-                Join <span aria-hidden>→</span>
-              </Link>
-            </li>
+            {user ? (
+              <li>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2.5 rounded-[var(--radius-sm)] py-1 pr-3 pl-1 font-mono text-[0.78rem] font-medium tracking-[0.06em] uppercase transition-colors"
+                  style={{ background: "var(--text)", color: "var(--bg)" }}
+                >
+                  <span
+                    className="grid size-6 place-items-center rounded-[var(--radius-sm)] text-[0.65rem]"
+                    style={{ background: "var(--brand-pure)", color: "#fff" }}
+                    aria-hidden
+                  >
+                    {initials(user.name)}
+                  </span>
+                  Dashboard
+                </Link>
+              </li>
+            ) : (
+              <>
+                <li>
+                  <Link
+                    href="/login"
+                    className="font-mono text-[0.78rem] font-medium tracking-[0.06em] uppercase transition-colors hover:text-[var(--brand)]"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-4 py-2 font-mono text-[0.78rem] font-medium tracking-[0.06em] uppercase transition-colors"
+                    style={{ background: "var(--text)", color: "var(--bg)" }}
+                  >
+                    Join <span aria-hidden>→</span>
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
 
           <Link
-            href="/signup"
+            href={user ? "/dashboard" : "/login"}
             className="rounded-[var(--radius-sm)] px-3 py-1.5 font-mono text-[0.78rem] font-medium tracking-[0.06em] uppercase md:hidden"
             style={{ background: "var(--text)", color: "var(--bg)" }}
           >
-            Join
+            {user ? "Dashboard" : "Join"}
           </Link>
         </div>
       </div>

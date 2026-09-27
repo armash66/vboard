@@ -81,3 +81,41 @@ export function bodyPreview(text: string, max = 180): string {
   if (text.length <= max) return text
   return `${text.slice(0, max).replace(/\s+\S*$/, "")}…`
 }
+
+const IST_OFFSET = "+05:30"
+
+export function parseCampusDateTime(value: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null
+  const date = new Date(`${value}:00${IST_OFFSET}`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const inputFmt = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: CAMPUS_TIME_ZONE,
+})
+
+export function toCampusInputValue(date: Date | null | undefined): string {
+  if (!date) return ""
+  const parts = Object.fromEntries(
+    inputFmt.formatToParts(date).map((p) => [p.type, p.value])
+  )
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+}
+
+const stampFmt = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: CAMPUS_TIME_ZONE,
+})
+
+export function formatStamp(date: Date): string {
+  return stampFmt.format(date)
+}

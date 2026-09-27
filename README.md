@@ -12,7 +12,7 @@ Clubs post events. Students register with one tap. No more copy-pasted Google Fo
 | Language   | TypeScript (strict)                                      |
 | Styling    | Tailwind CSS 4, shadcn (base-nova), Geist                |
 | Database   | PostgreSQL on Neon, Drizzle ORM                          |
-| Auth       | Better Auth (email + password), Resend verification      |
+| Auth       | VOSS (OIDC) via Better Auth, no passwords                |
 | Quality    | ESLint, Prettier, Vitest                                 |
 | Deploy     | Vercel, migrations via GitHub Actions                    |
 
@@ -21,12 +21,11 @@ Clubs post events. Students register with one tap. No more copy-pasted Google Fo
 ```bash
 npm install
 cp .env.development.example .env.local
-npm run dev:up
-npm run db:push
+npm run dev:setup
 npm run dev
 ```
 
-Open http://localhost:3000. See [docs/local-dev.md](./docs/local-dev.md) for details, and [.env.example](./.env.example) for the production variables.
+Open http://localhost:3000/login and pick a persona: super admin, site admin, community lead, manager, volunteer, or student. Each one sees a different dashboard, resolved from the database exactly as in production. See [docs/local-dev.md](./docs/local-dev.md), and [docs/voss-auth.md](./docs/voss-auth.md) for connecting a real VOSS client.
 
 ## Scripts
 
@@ -40,6 +39,8 @@ Open http://localhost:3000. See [docs/local-dev.md](./docs/local-dev.md) for det
 | `npm run db:push`      | Push the schema directly (development)              |
 | `npm run db:migrate`   | Apply pending SQL migrations (production)           |
 | `npm run db:studio`    | Open Drizzle Studio                                 |
+| `npm run dev:setup`    | Start Postgres, push the schema, seed personas      |
+| `npm run dev:seed`     | Wipe and reseed the local database                  |
 
 ## Project structure
 
@@ -58,10 +59,19 @@ research/         plan and future work
 scripts/          operational scripts
 ```
 
+## What is in the MVP
+
+- **Public site**: discover feed, calendar, communities, event pages with one-tap registration, approval queues and location gating
+- **Dashboard** (shadcn `dashboard-01` block): overview, my registrations, profile
+- **Community tools**: posts and events (draft, publish, pin, cancel, complete, delete), registrations with bulk approve / reject / check-in and CSV export, team management, settings
+- **Admin**: create and archive communities, appoint leads, people and site roles, audit log
+
 ## Docs
 
 - [research/plan.md](./research/plan.md) — the v1 plan
 - [research/future.md](./research/future.md) — deferred work
+- [research/rbac.md](./research/rbac.md) — roles, capabilities and the RBAC roadmap
+- [docs/voss-auth.md](./docs/voss-auth.md) — VOSS sign-in and client registration
 - [docs/UI_UX_SPEC.md](./docs/UI_UX_SPEC.md) — design system
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 

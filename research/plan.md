@@ -9,7 +9,7 @@ The wedge: replace the per-event Google Form workflow with unified, one-click re
 - Next.js 16 App Router (React 19) — Server Components, Server Actions, route handlers
 - TypeScript strict, ESLint + Prettier
 - Drizzle ORM + PostgreSQL on Neon
-- Better Auth (email + password) with email verification via Resend
+- Better Auth as an OIDC relying party of VOSS (accounts.vosslabs.org); no passwords in vboard
 - Tailwind 4 + shadcn (base-nova style, Base UI primitives)
 - Cloudflare R2 for image storage
 - Vercel deployment, migrations applied by GitHub Actions before each deploy
@@ -55,30 +55,28 @@ Install via CLI as needed: `npx shadcn@latest add <component>`
 
 ### Auth flow
 
-1. Signup with email + password (Better Auth)
-2. Domain check: must be `@vit.edu.in`
-3. Resend sends verification link, user clicks
-4. On verify: create profile row, assign `student` site role
-5. Subsequent logins → session cookie via the Better Auth `nextCookies` plugin
+1. "Continue with VOSS" starts an OAuth 2.1 + PKCE flow against accounts.vosslabs.org (Better Auth `genericOAuth`, provider id `voss`)
+2. VOSS verifies the `@vit.edu.in` mailbox with a one-time code; vboard never sees a password
+3. vboard rejects any non-`@vit.edu.in` identity again at user creation (defence in depth)
+4. On every session: ensure a `profile` row exists with the `student` site role
+5. Session cookie via the Better Auth `nextCookies` plugin; 7-day sessions that slide daily
 
-### Site roles (2)
+Local development cannot complete a VOSS login, so `VBOARD_DEV_AUTH=1` enables a seeded persona switcher on the login page. Only authentication is bypassed; roles resolve from the database exactly as in production. It is refused by `next build` and ignored when `NODE_ENV=production`.
 
-- `admin` — voss-labs / college team running the platform
-- `student` — every verified VIT user (default)
+### Roles
 
-### Community membership (flat)
-
-Active row in `community_member` = full rights for that community: create/edit posts, manage registrations, add/remove other members. No internal lead/member split.
+Five layers: visitor, student, community team (lead / manager / volunteer), site admin, super admin. The full capability matrix and the roadmap for further layers live in `research/rbac.md`.
 
 ### Permission rules
 
 ```
-manage post X      = (site admin) OR (active community_member for X.communityId)
-add member to Y    = (site admin) OR (active community_member for Y)
-manage everything  = site admin
+manage post X       = site admin OR (manager|lead of X.communityId)
+decide registration = site admin OR (manager|lead of the event's community)
+check in attendee   = site admin OR (any team role in the event's community)
+manage team of Y    = site admin OR (lead of Y), leads cannot appoint leads
+create community    = site admin
+appoint admin       = super admin (SUPER_ADMIN_EMAILS)
 ```
-
-Shared-credentials trade-off: a club may share one community_member account in practice. Schema doesn't force it; clubs can also add per-person rows.
 
 ## Database Schema
 
@@ -94,7 +92,7 @@ vboard-owned tables:
 - bio (text, nullable)
 - isActive, timestamps
 
-### role (2 seeded rows)
+### role (2 seeded rows) — replaced by `profile.site_role` enum in the MVP
 
 - name (unique) — `admin`, `student`
 - displayName, description, hierarchyLevel (admin=100, student=10)
@@ -114,10 +112,11 @@ vboard-owned tables:
 - createdBy (FK)
 - isActive, timestamps
 
-### community_member (flat)
+### community_member
 
 - communityId, userId (unique together)
-- joinedAt, isActive
+- role (enum: `lead` | `manager` | `volunteer`)
+- addedBy, joinedAt, isActive
 
 ### post (unified — text or event)
 

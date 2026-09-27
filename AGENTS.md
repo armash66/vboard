@@ -13,7 +13,7 @@ CLAUDE.md is symlinked to this file — same content applies to all coding agent
 - Next.js 16 App Router (React 19) — Server Components, Server Actions, route handlers
 - TypeScript strict, ESLint (`eslint-config-next`) + Prettier (with the Tailwind plugin)
 - Drizzle ORM + PostgreSQL on Neon (node-postgres against a local Docker database)
-- Better Auth (email + password) with email verification via Resend
+- Better Auth as an OIDC client of VOSS (accounts.vosslabs.org, the voss-labs/vauth repo) — no passwords
 - Tailwind 4 + shadcn (base-nova style, Base UI primitives)
 - Vitest for pure-logic unit tests
 - Vercel for deploy, GitHub Actions for CI and production migrations
@@ -29,6 +29,7 @@ CLAUDE.md is symlinked to this file — same content applies to all coding agent
 - `npm run db:generate` — generate a migration from schema changes
 - `npm run db:push` — apply schema directly (dev only)
 - `npm run db:migrate` — run pending SQL migrations (production)
+- `npm run dev:seed` — wipe and seed the local database with communities, events and one persona per role
 - `npx shadcn@latest add <component>` — install a shadcn component on demand
 
 ## Layout
@@ -38,7 +39,8 @@ CLAUDE.md is symlinked to this file — same content applies to all coding agent
 - `src/db/schema/<domain>.ts` — Drizzle tables, reexported via `src/db/schema/index.ts`
 - `src/db/queries/<domain>.ts` — async functions returning plain objects
 - `src/db/migrations/` — hand-reviewed SQL migrations, applied by `src/db/migrate.ts`
-- `src/lib/` — auth, email, formatting and other pure helpers (`*.test.ts` beside them)
+- `src/lib/` — auth, session, RBAC, formatting and other pure helpers (`*.test.ts` beside them)
+- `src/components/ui/` — shadcn (base-nova) components; the dashboard is built only from these and shadcn blocks
 - `docs/` — product and UI/UX spec; `docs/design/` is the frozen snapshot of the original design
 - `research/` — plan, future work, and investigations
 
@@ -53,11 +55,12 @@ CLAUDE.md is symlinked to this file — same content applies to all coding agent
 
 ## Identity & RBAC
 
-- Signup gated by `@vit.edu.in` email + Resend-verified link
-- 2 site roles: `admin`, `student`
-- Communities (clubs/societies) host posts and events
-- Flat community membership: active row in `community_member` = full rights for that community
-- Permission rule: `manage post X = (site admin) OR (active community_member for X.communityId)`
+- Sign-in is VOSS only. VOSS verifies the `@vit.edu.in` mailbox; vboard stores no passwords and re-checks the domain on user creation
+- Local dev uses the seeded persona switcher (`VBOARD_DEV_AUTH=1`); it bypasses authentication only, never authorization
+- Layers: visitor, student, community team (`lead` / `manager` / `volunteer` on `community_member.role`), site `admin` (`profile.site_role`), super admin (`SUPER_ADMIN_EMAILS`)
+- Capabilities live in `src/lib/rbac.ts`; check them with `requireCommunityAccess` / `actionCommunityAccess` / `requireSiteCapability`, never by comparing role strings in pages
+- Every privileged write calls `createAuditLog`
+- Full matrix and roadmap: `research/rbac.md`
 
 ## Schema notes
 

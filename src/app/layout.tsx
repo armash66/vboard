@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { ThemeProvider } from "next-themes"
-import { Footer } from "@/components/footer"
-import { Nav } from "@/components/nav"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import "./globals.css"
@@ -41,9 +39,7 @@ export default function RootLayout({
       <body className="bg-background min-h-dvh font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
-            <Nav />
-            <main className="container pt-28 pb-16">{children}</main>
-            <Footer />
+            {children}
             <Toaster />
           </TooltipProvider>
         </ThemeProvider>

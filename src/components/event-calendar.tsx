@@ -4,13 +4,13 @@ import { useMemo, useState } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { PostCard } from "@/components/post-card"
 import { campusDayKey, formatDayHeader } from "@/lib/format"
-import type { Post } from "@/lib/mock-data"
+import type { FeedPost } from "@/db/queries/posts"
 
-export function EventCalendar({ events }: { events: Post[] }) {
+export function EventCalendar({ events }: { events: FeedPost[] }) {
   const [selected, setSelected] = useState<Date | undefined>(() => new Date())
 
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, Post[]>()
+    const map = new Map<string, FeedPost[]>()
     for (const ev of events) {
       if (!ev.startsAt) continue
       const key = campusDayKey(ev.startsAt)

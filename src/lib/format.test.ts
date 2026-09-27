@@ -5,6 +5,8 @@ import {
   formatEventDate,
   formatEventRange,
   isSameCampusDay,
+  parseCampusDateTime,
+  toCampusInputValue,
 } from "@/lib/format"
 
 describe("bodyPreview", () => {
@@ -50,5 +52,24 @@ describe("formatEventRange", () => {
     const start = new Date("2026-10-01T05:30:00Z")
     const end = new Date("2026-10-01T08:00:00Z")
     expect(formatEventRange(start, end).date).not.toContain("–")
+  })
+})
+
+describe("campus datetime inputs", () => {
+  it("reads a datetime-local value as IST", () => {
+    expect(parseCampusDateTime("2026-10-01T11:00")?.toISOString()).toBe(
+      "2026-10-01T05:30:00.000Z"
+    )
+  })
+
+  it("rejects malformed input", () => {
+    expect(parseCampusDateTime("tomorrow")).toBeNull()
+  })
+
+  it("round-trips through the input format", () => {
+    const date = new Date("2026-10-01T05:30:00Z")
+    expect(parseCampusDateTime(toCampusInputValue(date))?.getTime()).toBe(
+      date.getTime()
+    )
   })
 })

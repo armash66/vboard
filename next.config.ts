@@ -1,5 +1,13 @@
 import type { NextConfig } from "next"
 
+if (process.env.NODE_ENV === "production" && process.env.VBOARD_DEV_AUTH) {
+  throw new Error(
+    "VBOARD_DEV_AUTH is set for a production build. It bypasses sign-in and " +
+      "must never be present in anything deployable.\n" +
+      "Build without it: VBOARD_DEV_AUTH= npm run build\n"
+  )
+}
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pg"],
 
