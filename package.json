@@ -27,7 +27,7 @@
     "dev:down": "docker compose down",
     "dev:reset": "docker compose down -v && npm run dev:setup",
     "dev:seed": "tsx scripts/seed-dev.ts",
-    "dev:setup": "docker compose up -d --wait && drizzle-kit push --force && npm run db:migrate -- --baseline && npm run dev:seed"
+    "dev:setup": "tsx scripts/dev-setup.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

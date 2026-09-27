@@ -3,11 +3,18 @@
 import { useMemo, useState } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { PostCard } from "@/components/post-card"
-import { campusDayKey, formatDayHeader } from "@/lib/format"
+import {
+  calendarDayKey,
+  campusCalendarDate,
+  campusDayKey,
+  formatCalendarHeader,
+} from "@/lib/format"
 import type { FeedPost } from "@/db/queries/posts"
 
 export function EventCalendar({ events }: { events: FeedPost[] }) {
-  const [selected, setSelected] = useState<Date | undefined>(() => new Date())
+  const [selected, setSelected] = useState<Date | undefined>(() =>
+    campusCalendarDate(new Date())
+  )
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, FeedPost[]>()
@@ -22,12 +29,16 @@ export function EventCalendar({ events }: { events: FeedPost[] }) {
   }, [events])
 
   const eventDays = useMemo(
-    () => events.map((e) => e.startsAt).filter((d): d is Date => !!d),
+    () =>
+      events
+        .map((e) => e.startsAt)
+        .filter((d): d is Date => !!d)
+        .map(campusCalendarDate),
     [events]
   )
 
   const selectedEvents = selected
-    ? (eventsByDay.get(campusDayKey(selected)) ?? [])
+    ? (eventsByDay.get(calendarDayKey(selected)) ?? [])
     : []
 
   return (
@@ -58,7 +69,7 @@ export function EventCalendar({ events }: { events: FeedPost[] }) {
       <div className="space-y-5">
         <div>
           <div className="eyebrow">
-            {selected ? formatDayHeader(selected) : "Pick a day"}
+            {selected ? formatCalendarHeader(selected) : "Pick a day"}
           </div>
           <h2 className="display-md mt-3" style={{ color: "var(--text)" }}>
             {selectedEvents.length === 0
@@ -94,5 +105,5 @@ export function EventCalendar({ events }: { events: FeedPost[] }) {
 }
 
 function isPastDay(date: Date) {
-  return campusDayKey(date) < campusDayKey(new Date())
+  return calendarDayKey(date) < campusDayKey(new Date())
 }

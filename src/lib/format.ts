@@ -1,43 +1,81 @@
-export const CAMPUS_TIME_ZONE = "Asia/Kolkata"
+const IST_OFFSET_MS = 330 * 60_000
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+]
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+]
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Dec",
+]
 
-const dayFmt = new Intl.DateTimeFormat("en-IN", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  timeZone: CAMPUS_TIME_ZONE,
-})
-const timeFmt = new Intl.DateTimeFormat("en-IN", {
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: CAMPUS_TIME_ZONE,
-})
-const fullDateFmt = new Intl.DateTimeFormat("en-IN", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: CAMPUS_TIME_ZONE,
-})
-const headerFmt = new Intl.DateTimeFormat("en-IN", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  timeZone: CAMPUS_TIME_ZONE,
-})
-const shortDateFmt = new Intl.DateTimeFormat("en-IN", {
-  day: "numeric",
-  month: "short",
-  timeZone: CAMPUS_TIME_ZONE,
-})
-const dayKeyFmt = new Intl.DateTimeFormat("en-CA", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  timeZone: CAMPUS_TIME_ZONE,
-})
+type Parts = {
+  year: number
+  month: number
+  day: number
+  weekday: number
+  hour: number
+  minute: number
+}
+
+function campusParts(date: Date): Parts {
+  const t = new Date(date.getTime() + IST_OFFSET_MS)
+  return {
+    year: t.getUTCFullYear(),
+    month: t.getUTCMonth(),
+    day: t.getUTCDate(),
+    weekday: t.getUTCDay(),
+    hour: t.getUTCHours(),
+    minute: t.getUTCMinutes(),
+  }
+}
+
+const pad = (n: number) => String(n).padStart(2, "0")
+
+function time(p: Parts) {
+  const h = p.hour % 12 || 12
+  return `${h}:${pad(p.minute)} ${p.hour < 12 ? "am" : "pm"}`
+}
+
+function shortDay(p: Parts) {
+  return `${WEEKDAYS[p.weekday].slice(0, 3)}, ${p.day} ${MONTHS_SHORT[p.month]}`
+}
+
+function fullDate(p: Parts) {
+  return `${WEEKDAYS[p.weekday]}, ${p.day} ${MONTHS[p.month]} ${p.year}`
+}
 
 export function campusDayKey(date: Date): string {
-  return dayKeyFmt.format(date)
+  const p = campusParts(date)
+  return `${p.year}-${pad(p.month + 1)}-${pad(p.day)}`
 }
 
 export function isSameCampusDay(a: Date, b: Date): boolean {
@@ -45,36 +83,36 @@ export function isSameCampusDay(a: Date, b: Date): boolean {
 }
 
 export function formatEventDate(start: Date, end?: Date): string {
-  const day = dayFmt.format(start)
-  const time = timeFmt.format(start)
-  if (!end) return `${day} · ${time}`
+  const s = campusParts(start)
+  if (!end) return `${shortDay(s)} · ${time(s)}`
+  const e = campusParts(end)
   return isSameCampusDay(start, end)
-    ? `${day} · ${time}–${timeFmt.format(end)}`
-    : `${day} → ${dayFmt.format(end)}`
+    ? `${shortDay(s)} · ${time(s)}–${time(e)}`
+    : `${shortDay(s)} → ${shortDay(e)}`
 }
 
 export function formatEventRange(
   start: Date,
   end?: Date
 ): { date: string; time: string } {
-  const startDate = fullDateFmt.format(start)
-  const startTime = timeFmt.format(start)
-  if (!end) return { date: startDate, time: startTime }
+  const s = campusParts(start)
+  if (!end) return { date: fullDate(s), time: time(s) }
+  const e = campusParts(end)
   const sameDay = isSameCampusDay(start, end)
   return {
-    date: sameDay ? startDate : `${startDate} – ${fullDateFmt.format(end)}`,
-    time: sameDay
-      ? `${startTime}–${timeFmt.format(end)}`
-      : `${startTime} → ${timeFmt.format(end)}`,
+    date: sameDay ? fullDate(s) : `${fullDate(s)} – ${fullDate(e)}`,
+    time: sameDay ? `${time(s)}–${time(e)}` : `${time(s)} → ${time(e)}`,
   }
 }
 
-export function formatDayHeader(date: Date): string {
-  return headerFmt.format(date)
+export function formatShortDate(date: Date): string {
+  const p = campusParts(date)
+  return `${p.day} ${MONTHS_SHORT[p.month]}`
 }
 
-export function formatShortDate(date: Date): string {
-  return shortDateFmt.format(date)
+export function formatStamp(date: Date): string {
+  const p = campusParts(date)
+  return `${p.day} ${MONTHS_SHORT[p.month]}, ${time(p)}`
 }
 
 export function bodyPreview(text: string, max = 180): string {
@@ -82,40 +120,27 @@ export function bodyPreview(text: string, max = 180): string {
   return `${text.slice(0, max).replace(/\s+\S*$/, "")}…`
 }
 
-const IST_OFFSET = "+05:30"
-
 export function parseCampusDateTime(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null
-  const date = new Date(`${value}:00${IST_OFFSET}`)
+  const date = new Date(`${value}:00+05:30`)
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-const inputFmt = new Intl.DateTimeFormat("en-CA", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-  timeZone: CAMPUS_TIME_ZONE,
-})
-
 export function toCampusInputValue(date: Date | null | undefined): string {
   if (!date) return ""
-  const parts = Object.fromEntries(
-    inputFmt.formatToParts(date).map((p) => [p.type, p.value])
-  )
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+  const p = campusParts(date)
+  return `${p.year}-${pad(p.month + 1)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`
 }
 
-const stampFmt = new Intl.DateTimeFormat("en-IN", {
-  day: "numeric",
-  month: "short",
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: CAMPUS_TIME_ZONE,
-})
+export function campusCalendarDate(date: Date): Date {
+  const p = campusParts(date)
+  return new Date(p.year, p.month, p.day)
+}
 
-export function formatStamp(date: Date): string {
-  return stampFmt.format(date)
+export function calendarDayKey(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export function formatCalendarHeader(date: Date): string {
+  return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`
 }

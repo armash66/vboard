@@ -20,10 +20,11 @@ Clubs post events. Students register with one tap. No more copy-pasted Google Fo
 
 ```bash
 npm install
-cp .env.development.example .env.local
 npm run dev:setup
 npm run dev
 ```
+
+`dev:setup` creates `.env.local`, starts Postgres in Docker, pushes the schema and loads demo data: five communities with full teams, upcoming, past and cancelled events, and about 370 registrations.
 
 Open http://localhost:3000/login and pick a persona: super admin, site admin, community lead, manager, volunteer, or student. Each one sees a different dashboard, resolved from the database exactly as in production. See [docs/local-dev.md](./docs/local-dev.md), and [docs/voss-auth.md](./docs/voss-auth.md) for connecting a real VOSS client.
 
@@ -39,7 +40,7 @@ Open http://localhost:3000/login and pick a persona: super admin, site admin, co
 | `npm run db:push`      | Push the schema directly (development)              |
 | `npm run db:migrate`   | Apply pending SQL migrations (production)           |
 | `npm run db:studio`    | Open Drizzle Studio                                 |
-| `npm run dev:setup`    | Start Postgres, push the schema, seed personas      |
+| `npm run dev:setup`    | Fresh clone to a seeded local database, one command |
 | `npm run dev:seed`     | Wipe and reseed the local database                  |
 
 ## Project structure

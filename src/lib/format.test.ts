@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   bodyPreview,
+  calendarDayKey,
+  campusCalendarDate,
   campusDayKey,
+  formatCalendarHeader,
+  formatStamp,
   formatEventDate,
   formatEventRange,
   isSameCampusDay,
@@ -70,6 +74,48 @@ describe("campus datetime inputs", () => {
     const date = new Date("2026-10-01T05:30:00Z")
     expect(parseCampusDateTime(toCampusInputValue(date))?.getTime()).toBe(
       date.getTime()
+    )
+  })
+})
+
+describe("campus calendar dates", () => {
+  it("maps a late-night UTC instant to the next IST calendar day", () => {
+    const date = campusCalendarDate(new Date("2026-09-27T20:00:00Z"))
+    expect(calendarDayKey(date)).toBe("2026-09-28")
+  })
+
+  it("keys a calendar date by its local day", () => {
+    expect(calendarDayKey(new Date(2026, 0, 5))).toBe("2026-01-05")
+  })
+})
+
+describe("deterministic formatting", () => {
+  const start = new Date("2026-09-30T11:00:00Z")
+
+  it("formats an IST short day and time", () => {
+    expect(formatEventDate(start)).toBe("Wed, 30 Sept · 4:30 pm")
+  })
+
+  it("formats a same-day range", () => {
+    const end = new Date("2026-09-30T13:30:00Z")
+    expect(formatEventRange(start, end)).toEqual({
+      date: "Wednesday, 30 September 2026",
+      time: "4:30 pm–7:00 pm",
+    })
+  })
+
+  it("formats midnight and noon in 12-hour time", () => {
+    expect(formatStamp(new Date("2026-09-30T18:30:00Z"))).toBe(
+      "1 Oct, 12:00 am"
+    )
+    expect(formatStamp(new Date("2026-09-30T06:30:00Z"))).toBe(
+      "30 Sept, 12:00 pm"
+    )
+  })
+
+  it("formats a calendar header from local date fields", () => {
+    expect(formatCalendarHeader(new Date(2026, 8, 28))).toBe(
+      "Monday, 28 September"
     )
   })
 })

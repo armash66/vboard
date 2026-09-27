@@ -80,12 +80,18 @@ export const communities: Community[] = [
   },
 ]
 
-const today = new Date()
-function daysFromNow(n: number, hour = 10, minute = 0) {
-  const d = new Date(today)
-  d.setDate(d.getDate() + n)
-  d.setHours(hour, minute, 0, 0)
-  return d
+const istDay = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Kolkata",
+})
+
+export function daysFromNow(n: number, hour = 10, minute = 0) {
+  const day = new Date(Date.now() + n * 86_400_000)
+  const hh = String(hour).padStart(2, "0")
+  const mm = String(minute).padStart(2, "0")
+  return new Date(`${istDay.format(day)}T${hh}:${mm}:00+05:30`)
 }
 
 export const posts: Post[] = [

@@ -4,12 +4,12 @@ import { community, post, registration, user } from "@/db/schema"
 
 const seatsTaken = sql<number>`(
   select count(*)::int from ${registration}
-  where ${registration.postId} = ${post.id}
+  where ${registration.postId} = "post"."id"
   and ${registration.status} in ('approved', 'attended')
 )`
 const pendingCount = sql<number>`(
   select count(*)::int from ${registration}
-  where ${registration.postId} = ${post.id} and ${registration.status} = 'pending'
+  where ${registration.postId} = "post"."id" and ${registration.status} = 'pending'
 )`
 
 const feedColumns = {

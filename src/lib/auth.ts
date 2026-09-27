@@ -16,7 +16,6 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
 
-  // VOSS is the only way in; a password here would be a second, unwatched door.
   emailAndPassword: {
     enabled: false,
   },

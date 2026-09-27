@@ -7,7 +7,7 @@
 - Schema: `profile`, `community`, `community_member`, `post`, `registration`, `audit_log`.
 - Public pages read from Postgres; one-tap registration, approval queues, location gating, VIT-only posts.
 - Dashboard built from the shadcn `dashboard-01` block and base-nova components: overview, registrations, profile, community posts and events, registrations with bulk actions and CSV export, team, settings, admin communities, people, audit log.
-- `npm run dev:seed` seeds communities, events and one persona per role.
+- `npm run dev:setup` takes a fresh clone to a seeded local database, like VERP; `npm run dev:seed` loads demo data: 100 people, full teams, 19 posts, about 370 registrations and audit history.
 
 - Rebuilt on the verp project structure: Next.js 16 App Router, npm, ESLint, Prettier, Vitest, Vercel.
 - Ported every existing page (Discover, Calendar, Communities, Community, Post, Sign in, Join, Dashboard, Profile) with the original design unchanged.

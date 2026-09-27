@@ -1,8 +1,7 @@
 import { config } from "dotenv"
 config({ path: ".env.local" })
 
-import { randomUUID } from "node:crypto"
-import { eq, inArray, sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import {
   auditLog,
@@ -11,13 +10,19 @@ import {
   post,
   profile,
   registration,
-  user,
 } from "@/db/schema"
 import { isLocalPostgres } from "@/db/driver"
 import { DEV_PERSONAS } from "@/lib/dev-personas"
 import type { CommunityRole } from "@/lib/rbac"
 import type { RegistrationStatus } from "@/lib/registration"
+import { demoDrafts, demoPosts, TEAM_FILL } from "./lib/demo"
 import { communities, posts } from "./lib/fixtures"
+import {
+  DEPARTMENTS,
+  registrationStatus,
+  studentIdentity,
+  upsertUser,
+} from "./lib/seed-helpers"
 
 const AUTHORS = [
   { name: "Devansh Shah", email: "devansh.shah@vit.edu.in" },
@@ -26,41 +31,7 @@ const AUTHORS = [
   { name: "Sneha Pawar", email: "sneha.pawar@vit.edu.in" },
 ]
 
-const FIRST = [
-  "Aditi",
-  "Arjun",
-  "Diya",
-  "Ishaan",
-  "Kavya",
-  "Mihir",
-  "Nikita",
-  "Omkar",
-  "Pooja",
-  "Rahul",
-  "Sanya",
-  "Tanmay",
-  "Vedika",
-  "Yash",
-  "Zoya",
-  "Aniket",
-  "Bhavna",
-  "Chirag",
-  "Esha",
-  "Gaurav",
-]
-const LAST = [
-  "Patil",
-  "Sharma",
-  "Kulkarni",
-  "Deshmukh",
-  "Rao",
-  "Gupta",
-  "Joshi",
-  "Naik",
-]
-const DEPARTMENTS = ["CMPN", "INFT", "EXTC", "BIOMED"]
-
-const MEMBERSHIPS: { email: string; slug: string; role: CommunityRole }[] = [
+const LEADS: { email: string; slug: string; role: CommunityRole }[] = [
   { email: "aarav.mehta@vit.edu.in", slug: "gdg-vit", role: "lead" },
   { email: "devansh.shah@vit.edu.in", slug: "coding-club", role: "lead" },
   { email: "sneha.iyer@vit.edu.in", slug: "coding-club", role: "manager" },
@@ -70,24 +41,14 @@ const MEMBERSHIPS: { email: string; slug: string; role: CommunityRole }[] = [
   { email: "sneha.pawar@vit.edu.in", slug: "ieee-vit", role: "lead" },
 ]
 
-async function upsertUser(name: string, email: string) {
-  const existing = await db.query.user.findFirst({
-    where: eq(user.email, email),
-    columns: { id: true },
-  })
-  if (existing) return existing.id
-  const id = randomUUID()
-  const now = new Date()
-  await db.insert(user).values({
-    id,
-    name,
-    email,
-    emailVerified: true,
-    createdAt: now,
-    updatedAt: now,
-  })
-  return id
+const PRIYA_PLAN: Record<string, RegistrationStatus> = {
+  "build-with-gemma-4": "approved",
+  "monsoon-monologues": "pending",
+  "hackathon-night-2": "attended",
+  "dsa-study-circle-week-3": "approved",
 }
+
+const STUDENT_COUNT = 90
 
 async function run() {
   const url = process.env.DATABASE_URL
@@ -106,14 +67,10 @@ async function run() {
   for (const p of [...DEV_PERSONAS, ...AUTHORS]) {
     ids.set(p.email, await upsertUser(p.name, p.email))
   }
-
   const students: string[] = []
-  for (let i = 0; i < 60; i++) {
-    const first = FIRST[i % FIRST.length]
-    const last = LAST[(i * 7) % LAST.length]
-    const email = `${first}.${last}${i}@vit.edu.in`.toLowerCase()
-    const id = await upsertUser(`${first} ${last}`, email)
-    students.push(id)
+  for (let i = 0; i < STUDENT_COUNT; i++) {
+    const s = studentIdentity(i)
+    students.push(await upsertUser(s.name, s.email))
   }
 
   const everyone = [...ids.values(), ...students]
@@ -131,58 +88,104 @@ async function run() {
         set: { siteRole: "student" },
       })
   }
+  const admin = ids.get("neha.joshi@vit.edu.in")!
   await db
     .update(profile)
     .set({ siteRole: "admin" })
-    .where(eq(profile.userId, ids.get("neha.joshi@vit.edu.in")!))
+    .where(eq(profile.userId, admin))
 
+  const audit: (typeof auditLog.$inferInsert)[] = []
   const communityIds = new Map<string, string>()
-  for (const c of communities) {
+  for (const [i, c] of communities.entries()) {
+    const createdAt = new Date(Date.now() - (60 - i) * 86_400_000)
     const [row] = await db
       .insert(community)
       .values({
         slug: c.slug,
         name: c.name,
         description: c.description,
-        createdBy: ids.get("neha.joshi@vit.edu.in"),
+        createdBy: admin,
+        createdAt,
       })
       .returning({ id: community.id })
     communityIds.set(c.id, row.id)
     communityIds.set(c.slug, row.id)
+    audit.push({
+      actorId: admin,
+      action: "community.created",
+      targetType: "community",
+      targetId: row.id,
+      communityId: row.id,
+      details: { name: c.name },
+      createdAt,
+    })
   }
 
-  for (const m of MEMBERSHIPS) {
-    await db.insert(communityMember).values({
-      communityId: communityIds.get(m.slug)!,
-      userId: ids.get(m.email)!,
-      role: m.role,
-      addedBy: ids.get("neha.joshi@vit.edu.in"),
+  const team = [...LEADS]
+  let pick = 0
+  for (const fill of TEAM_FILL) {
+    for (let n = 0; n < fill.count; n++) {
+      const s = studentIdentity(pick++)
+      team.push({ email: s.email, slug: fill.slug, role: fill.role })
+    }
+  }
+  const emailToId = new Map([...ids.entries()])
+  for (let i = 0; i < STUDENT_COUNT; i++)
+    emailToId.set(studentIdentity(i).email, students[i])
+  for (const m of team) {
+    const communityId = communityIds.get(m.slug)!
+    const userId = emailToId.get(m.email)!
+    const addedBy =
+      m.role === "lead"
+        ? admin
+        : (emailToId.get(
+            LEADS.find((l) => l.slug === m.slug && l.role === "lead")!.email
+          ) ?? admin)
+    await db
+      .insert(communityMember)
+      .values({ communityId, userId, role: m.role, addedBy })
+    audit.push({
+      actorId: addedBy,
+      action: "member.added",
+      targetType: "user",
+      targetId: userId,
+      communityId,
+      details: { email: m.email, role: m.role },
     })
   }
 
   const authorByName = new Map(
     [...DEV_PERSONAS, ...AUTHORS].map((p) => [p.name, ids.get(p.email)!])
   )
-
-  const priya = ids.get("priya.nair@vit.edu.in")!
+  const now = new Date()
+  const pool = students.slice(pick)
   let cursor = 0
-  for (const p of posts) {
+  let registrations = 0
+
+  for (const p of [...posts, ...demoPosts]) {
+    const past = !!p.endsAt && p.endsAt < now
+    const status =
+      p.status === "published" && p.isEvent && past ? "completed" : p.status
+    const authorId = authorByName.get(p.authorName) ?? null
+    const communityId = communityIds.get(p.communityId)!
     const [row] = await db
       .insert(post)
       .values({
         slug: p.slug,
-        communityId: communityIds.get(p.communityId)!,
-        authorId: authorByName.get(p.authorName) ?? null,
+        communityId,
+        authorId,
         title: p.title,
         body: p.body,
         visibility: p.visibility,
         isPinned: p.isPinned,
-        status: p.status,
+        status,
         isEvent: p.isEvent,
         startsAt: p.startsAt ?? null,
         endsAt: p.endsAt ?? null,
         location: p.location ?? null,
-        locationVisibility: p.locationVisibility ?? null,
+        locationVisibility: p.isEvent
+          ? (p.locationVisibility ?? "public")
+          : null,
         registrationOpensAt: p.registrationOpensAt ?? null,
         registrationClosesAt: p.registrationClosesAt ?? null,
         capacity: p.capacity ?? null,
@@ -190,48 +193,71 @@ async function run() {
         createdAt: p.createdAt,
       })
       .returning({ id: post.id })
+    audit.push({
+      actorId: authorId,
+      action: "post.published",
+      targetType: "post",
+      targetId: row.id,
+      communityId,
+      details: { title: p.title },
+      createdAt: p.createdAt,
+    })
 
     if (!p.isEvent) continue
-    const count = Math.min(p.registrationCount, students.length)
-    const rows = []
+    const rows: (typeof registration.$inferInsert)[] = []
+    const count = Math.min(p.registrationCount, pool.length)
     for (let i = 0; i < count; i++) {
-      const userId = students[(cursor + i) % students.length]
-      const status: RegistrationStatus = p.requiresApproval
-        ? i % 3 === 0
-          ? "approved"
-          : "pending"
-        : "approved"
-      rows.push({ postId: row.id, userId, status })
-    }
-    cursor += 7
-    if (p.slug === "build-with-gemma-4" || p.slug === "monsoon-monologues") {
+      const regStatus = registrationStatus({ ...p, status }, i, now)
       rows.push({
         postId: row.id,
-        userId: priya,
-        status: (p.requiresApproval
-          ? "pending"
-          : "approved") as RegistrationStatus,
+        userId: pool[(cursor + i) % pool.length],
+        status: regStatus,
+        checkedInAt: regStatus === "attended" ? p.startsAt : null,
+        registeredAt: new Date(p.createdAt.getTime() + (i + 1) * 3_600_000),
       })
     }
+    cursor += 11
+    const priya = PRIYA_PLAN[p.slug]
+    if (priya)
+      rows.push({
+        postId: row.id,
+        userId: ids.get("priya.nair@vit.edu.in")!,
+        status: priya,
+        checkedInAt: priya === "attended" ? p.startsAt : null,
+      })
     if (rows.length) await db.insert(registration).values(rows)
+    registrations += rows.length
+    if (past) {
+      audit.push({
+        actorId: ids.get("rohan.desai@vit.edu.in")!,
+        action: "registration.checkin",
+        targetType: "post",
+        targetId: row.id,
+        communityId,
+        details: {
+          count: rows.filter((r) => r.status === "attended").length,
+          title: p.title,
+        },
+        createdAt: p.startsAt,
+      })
+    }
   }
 
-  const codingClub = communityIds.get("coding-club")!
-  await db.insert(post).values({
-    slug: "hacktoberfest-kickoff-draft",
-    communityId: codingClub,
-    authorId: ids.get("sneha.iyer@vit.edu.in"),
-    title: "Hacktoberfest kickoff",
-    body: "Draft: first-PR workshop and repo list for Hacktoberfest.",
-    status: "draft",
-  })
+  for (const d of demoDrafts) {
+    await db.insert(post).values({
+      slug: `${d.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-draft`,
+      communityId: communityIds.get(d.communityId)!,
+      authorId: authorByName.get(d.authorName) ?? null,
+      title: d.title,
+      body: d.body,
+      status: "draft",
+    })
+  }
 
-  const counts = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(registration)
-    .where(inArray(registration.status, ["approved", "pending"]))
+  await db.insert(auditLog).values(audit)
+
   console.log(
-    `Seeded ${communities.length} communities, ${posts.length + 1} posts, ${counts[0].n} registrations, ${everyone.length} users.`
+    `Seeded ${communities.length} communities, ${team.length} team members, ${posts.length + demoPosts.length + demoDrafts.length} posts, ${registrations} registrations, ${everyone.length} people.`
   )
   console.log("Personas:")
   for (const p of DEV_PERSONAS)

@@ -4,16 +4,16 @@ import { community, communityMember, post } from "@/db/schema"
 
 const postCount = sql<number>`(
   select count(*)::int from ${post}
-  where ${post.communityId} = ${community.id} and ${post.status} = 'published'
+  where ${post.communityId} = "community"."id" and ${post.status} = 'published'
 )`
 const eventCount = sql<number>`(
   select count(*)::int from ${post}
-  where ${post.communityId} = ${community.id} and ${post.status} = 'published'
+  where ${post.communityId} = "community"."id" and ${post.status} = 'published'
   and ${post.isEvent} = true
 )`
 const teamCount = sql<number>`(
   select count(*)::int from ${communityMember}
-  where ${communityMember.communityId} = ${community.id}
+  where ${communityMember.communityId} = "community"."id"
   and ${communityMember.isActive} = true
 )`
 

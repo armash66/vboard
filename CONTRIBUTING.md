@@ -6,9 +6,8 @@ vboard is a VOSS Labs project. Contributions are welcome from all Vidyalankar st
 
 1. Fork the repo and clone your fork
 2. `npm install`
-3. `cp .env.development.example .env.local`
-4. `npm run dev:up && npm run db:push`
-5. `npm run dev`
+3. `npm run dev:setup`
+4. `npm run dev`, then pick a persona at http://localhost:3000/login
 
 You need Docker running for the local database.
 
