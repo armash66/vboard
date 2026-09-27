@@ -1,0 +1,92 @@
+import type { Metadata } from "next"
+import {
+  AppSidebar,
+  type SidebarSection,
+} from "@/components/dashboard/app-sidebar"
+import { SiteHeader } from "@/components/dashboard/site-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { listAllCommunities } from "@/db/queries/communities"
+import { COMMUNITY_ROLE_LABEL, SITE_ROLE_LABEL, siteCan } from "@/lib/rbac"
+import { requireUser } from "@/lib/session"
+
+export const metadata: Metadata = { title: "Dashboard · vboard" }
+export const dynamic = "force-dynamic"
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const user = await requireUser()
+  const isAdmin = siteCan(user.siteRole, "user:read")
+
+  const sections: SidebarSection[] = [
+    {
+      items: [
+        { title: "Overview", url: "/dashboard", icon: "overview" },
+        {
+          title: "My registrations",
+          url: "/dashboard/registrations",
+          icon: "registrations",
+        },
+        { title: "Profile", url: "/dashboard/profile", icon: "profile" },
+      ],
+    },
+  ]
+  if (user.memberships.length > 0) {
+    sections.push({
+      label: "Your communities",
+      items: user.memberships.map((m) => ({
+        title: m.name,
+        url: `/dashboard/c/${m.slug}`,
+        badge: COMMUNITY_ROLE_LABEL[m.role],
+        initial: m.name.charAt(0),
+      })),
+    })
+  }
+  if (isAdmin) {
+    sections.push({
+      label: "Admin",
+      items: [
+        {
+          title: "Communities",
+          url: "/dashboard/admin/communities",
+          icon: "communities",
+        },
+        { title: "People", url: "/dashboard/admin/people", icon: "people" },
+        { title: "Audit log", url: "/dashboard/admin/audit", icon: "audit" },
+      ],
+    })
+  }
+
+  const names: Record<string, string> = {}
+  const communities = isAdmin ? await listAllCommunities() : user.memberships
+  for (const c of communities) names[c.slug] = c.name
+
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 64)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar
+        variant="inset"
+        sections={sections}
+        user={{
+          name: user.name,
+          email: user.email,
+          role: SITE_ROLE_LABEL[user.siteRole],
+        }}
+      />
+      <SidebarInset>
+        <SiteHeader names={names} />
+        <div className="@container/main flex flex-1 flex-col gap-6 p-4 lg:p-6">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}

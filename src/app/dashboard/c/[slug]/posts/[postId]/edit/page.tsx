@@ -1,0 +1,42 @@
+import { notFound } from "next/navigation"
+import { PostForm } from "@/components/dashboard/post-form"
+import { getPostById } from "@/db/queries/posts"
+import { toCampusInputValue } from "@/lib/format"
+import { requireCommunityAccess } from "@/lib/session"
+import { updatePostAction } from "../../actions"
+
+export default async function EditPostPage({
+  params,
+}: {
+  params: Promise<{ slug: string; postId: string }>
+}) {
+  const { slug, postId } = await params
+  const access = await requireCommunityAccess(slug, "post:write")
+  const post = /^[0-9a-f-]{36}$/.test(postId) ? await getPostById(postId) : null
+  if (!post || post.communityId !== access.community.id) notFound()
+
+  return (
+    <PostForm
+      action={updatePostAction}
+      slug={slug}
+      postId={post.id}
+      canPublish={access.can("post:publish")}
+      mode="edit"
+      defaults={{
+        title: post.title,
+        body: post.body,
+        visibility: post.visibility,
+        isPinned: post.isPinned,
+        isEvent: post.isEvent,
+        startsAt: toCampusInputValue(post.startsAt),
+        endsAt: toCampusInputValue(post.endsAt),
+        location: post.location ?? "",
+        locationVisibility: post.locationVisibility ?? "public",
+        registrationOpensAt: toCampusInputValue(post.registrationOpensAt),
+        registrationClosesAt: toCampusInputValue(post.registrationClosesAt),
+        capacity: post.capacity?.toString() ?? "",
+        requiresApproval: post.requiresApproval,
+      }}
+    />
+  )
+}

@@ -1,4 +1,8 @@
-// Schema barrel — domain files reexport here so Drizzle picks them up
-// via src/db/index.ts. Domain files added in Phase 1 onward.
-
-export {};
+export * from "./auth"
+export * from "./enums"
+export * from "./profiles"
+export * from "./communities"
+export * from "./posts"
+export * from "./registrations"
+export * from "./audit"
+export * from "./relations"
